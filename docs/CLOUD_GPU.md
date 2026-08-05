@@ -10,6 +10,15 @@ The Decode page uses one **Compute target** selector:
 Both choices produce the same `cubed-core/decode-result` v1 artifact. Runs is
 read-only and never starts compute.
 
+You do not normally have to touch this selector. Local CUDA is preselected, and
+when this machine has a usable card the page says so and no choice is needed.
+
+When this machine has no usable card, the page says that plainly and offers
+your one configured host as a single button. It never switches for you. A
+remote host copies your recording to another machine, and a rented host bills
+you, so that stays your decision. With several hosts configured, the page asks
+you to pick one.
+
 ## Choose a topology
 
 | Setup | Workbench | CUDA job | Best for |

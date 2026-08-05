@@ -82,6 +82,38 @@ test("Local CUDA uses capability data and remote loading does not hide it", () =
   assert.match(decodeSource, /computeTargetUnavailableReason/);
 });
 
+test("a usable local card is stated plainly and needs no decision", () => {
+  assert.match(selectorSource, /const localReady = localGpu !== null && localGpu\.available;/);
+  assert.match(selectorSource, /Ready to go\./);
+  assert.match(selectorSource, /Nothing to set up\./);
+});
+
+test("an unusable local card offers the one configured host as a single click", () => {
+  // The empty local value stays selected but unselectable when this machine
+  // has no card, so the operator is told what to do instead of being left on
+  // a dead option. One host resolves to a button, several to a prompt, and
+  // neither path selects a billable remote machine on the operator's behalf.
+  assert.match(
+    selectorSource,
+    /const stuckOnUnusableLocal = localUnavailable && !selectedId;/,
+  );
+  assert.match(
+    selectorSource,
+    /stuckOnUnusableLocal && hosts\.length === 1 \? hosts\[0\] : null/,
+  );
+  assert.match(selectorSource, /onClick=\{\(\) => onChange\(soleAlternative\.id\)\}/);
+  assert.match(selectorSource, /Use \{soleAlternative\.label\} instead/);
+  assert.match(selectorSource, /hosts\.length > 1 \?/);
+  assert.match(selectorSource, /Demo, Add video, Label, and Runs all still/);
+});
+
+test("host setup guidance stays out of the way when local already works", () => {
+  assert.match(
+    selectorSource,
+    /hosts\.length === 0 && localUnavailable && \(/,
+  );
+});
+
 test("a restored result stays primary when its previous compute target is unavailable", () => {
   assert.match(
     decodeSource,

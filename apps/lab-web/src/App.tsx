@@ -35,7 +35,11 @@ import { apiStateFromProbe } from "./apiSession";
 import type { ApiState } from "./apiSession";
 import type { Capabilities } from "./types";
 
-const SOURCE_REPOSITORY_URL = "https://github.com/KingBobJoeIV/cubed-core";
+// AGPL-3.0 asks that a network user be offered the source of the version they
+// are actually running. That is this fork, so the link resolves here rather
+// than upstream. Upstream credit lives in README.md and NOTICE.
+const SOURCE_REPOSITORY_URL =
+  "https://github.com/ogsortmybricks-crypto/cubed-core";
 
 function StickerMark() {
   return (

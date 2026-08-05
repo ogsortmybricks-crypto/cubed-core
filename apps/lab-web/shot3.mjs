@@ -1,0 +1,13 @@
+import { chromium } from "@playwright/test";
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+await page.goto("http://127.0.0.1:8123/decode", { waitUntil: "networkidle" });
+await page.waitForTimeout(1500);
+await page.getByLabel("Workspace capture").selectOption({ index: 1 });
+await page.waitForTimeout(3000);
+const el = page.locator(".compute-target-control").first();
+await el.scrollIntoViewIfNeeded();
+await page.waitForTimeout(600);
+await el.screenshot({ path: "/tmp/compute.png" });
+console.log(await el.innerText());
+await browser.close();

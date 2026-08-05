@@ -5,8 +5,10 @@ import json
 import os
 import secrets
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import __version__
 from .capabilities import build_capabilities
 from .model_artifacts import tracker_model_capability
 from .model_packaging import ModelPackageError, package_tracker_models
@@ -25,11 +27,199 @@ def _tcp_port(value: str) -> int:
     return port
 
 
-def _doctor(settings: Settings) -> int:
+PASS = "pass"
+BLOCKED = "blocked"
+OPTIONAL = "optional"
+
+
+@dataclass
+class _Check:
+    """One plain-language line of the readiness report."""
+
+    label: str
+    state: str
+    detail: str = ""
+    # Commands or sentences that resolve a blocked or optional check.
+    fix: tuple[str, ...] = ()
+
+
+@dataclass
+class _Section:
+    title: str
+    checks: list[_Check] = field(default_factory=list)
+
+
+def _report_marks() -> tuple[str, str, str]:
+    """Return pass/blocked/optional marks the active stdout encoding can print.
+
+    Native Windows consoles still default to a legacy code page, so fall back
+    to ASCII rather than raising UnicodeEncodeError on a readiness report.
+    """
+
+    encoding = getattr(sys.stdout, "encoding", None) or "ascii"
+    try:
+        "✓✗•".encode(encoding)
+    except (LookupError, UnicodeEncodeError):
+        return ("[ok]", "[!!]", "[--]")
+    return (" ✓ ", " ✗ ", " • ")
+
+
+def _gpu_check(report: dict) -> _Check:
+    gpu = report.get("gpu") or {}
+    devices = gpu.get("devices") or []
+    if gpu.get("available") and devices:
+        names = ", ".join(
+            device.get("name", "GPU")
+            + (
+                f" ({round(device['memory_mib'] / 1024)} GB)"
+                if isinstance(device.get("memory_mib"), int)
+                else ""
+            )
+            for device in devices
+        )
+        return _Check("Graphics card for live Decode", PASS, names)
+    return _Check(
+        "Graphics card for live Decode",
+        OPTIONAL,
+        gpu.get("reason") or "no NVIDIA CUDA graphics card detected here",
+        fix=(
+            "You do not need one for Demo, Add video, Label, or Runs.",
+            "For live Decode, use a machine with an NVIDIA card or rent one:",
+            "see docs/CLOUD_GPU.md",
+        ),
+    )
+
+
+def _doctor_sections(report: dict, cuda_probe: dict | None) -> list[_Section]:
+    commands = report.get("commands") or {}
+    prediction = (report.get("label") or {}).get("prediction") or {}
+    decode = report.get("decode_jobs") or {}
+
+    video = _Section("Video tools (required)")
+    for name, label in (("ffmpeg", "FFmpeg"), ("ffprobe", "FFprobe")):
+        path = commands.get(name)
+        if path:
+            video.checks.append(_Check(label, PASS, str(path)))
+        else:
+            video.checks.append(
+                _Check(
+                    label,
+                    BLOCKED,
+                    "not found on PATH",
+                    fix=(
+                        "macOS:  brew install ffmpeg",
+                        "Linux:  sudo apt-get install -y ffmpeg",
+                    ),
+                )
+            )
+
+    compute = _Section("Decode")
+    compute.checks.append(_gpu_check(report))
+    decode_status = decode.get("status")
+    if decode.get("enabled"):
+        compute.checks.append(
+            _Check(
+                "Running a new Decode",
+                PASS,
+                decode.get("runner_label") or decode_status or "ready",
+            )
+        )
+    elif decode_status:
+        compute.checks.append(
+            _Check(
+                "Running a new Decode",
+                OPTIONAL,
+                "turned off on this workbench",
+                fix=(
+                    "Demo and Runs replay finished results without it.",
+                    f"Reported reason: {decode.get('reason') or decode_status}",
+                ),
+            )
+        )
+    if cuda_probe is not None:
+        if cuda_probe.get("ready"):
+            compute.checks.append(_Check("CUDA model session", PASS, "active"))
+        else:
+            compute.checks.append(
+                _Check(
+                    "CUDA model session",
+                    BLOCKED,
+                    cuda_probe.get("reason") or "the CUDA session did not activate",
+                    fix=("make bootstrap-decode-gpu",),
+                )
+            )
+
+    optional = _Section("Label helper model (optional)")
+    prediction_status = prediction.get("status")
+    if prediction_status == "misconfigured":
+        optional.checks.append(
+            _Check(
+                "Label prediction",
+                BLOCKED,
+                prediction.get("reason") or "configured but unusable",
+                fix=("Fix or unset CUBED_CORE_LABEL_PREDICT_COMMAND, then re-run.",),
+            )
+        )
+    elif prediction_status == "available":
+        optional.checks.append(_Check("Label prediction", PASS, "ready"))
+    else:
+        optional.checks.append(
+            _Check(
+                "Label prediction",
+                OPTIONAL,
+                "not set up",
+                fix=("Label works by hand without it. To add it: make bootstrap-label-cpu",),
+            )
+        )
+
+    return [video, compute, optional]
+
+
+def _render_doctor(report: dict, sections: list[_Section], ready: bool) -> None:
+    ok_mark, bad_mark, note_mark = _report_marks()
+    marks = {PASS: ok_mark, BLOCKED: bad_mark, OPTIONAL: note_mark}
+
+    print(f"Cubed Core {__version__} - readiness check")
+    workspace = report.get("workspace")
+    if workspace:
+        print(f"Your files are kept in: {workspace}")
+
+    for section in sections:
+        if not section.checks:
+            continue
+        print(f"\n{section.title}")
+        width = max(len(check.label) for check in section.checks)
+        for check in section.checks:
+            label = check.label.ljust(width) if check.detail else check.label
+            detail = f"   {check.detail}" if check.detail else ""
+            print(f"  {marks[check.state]} {label}{detail}")
+            if check.state != PASS:
+                for line in check.fix:
+                    print(f"        {line}")
+
+    blocked = [check for section in sections for check in section.checks if check.state == BLOCKED]
+    print()
+    if ready and not blocked:
+        print("Everything required is ready.")
+        print("Next step:  make workbench")
+    else:
+        count = len(blocked) or 1
+        noun = "item needs" if count == 1 else "items need"
+        print(f"{count} {noun} attention before this workbench is fully ready.")
+        print("Fix the lines marked above, then run 'make doctor' again.")
+        print("Demo still replays a finished run in the meantime.")
+    for tool in report.get("tools") or []:
+        status = tool.get("status")
+        if status and status != "available":
+            print(f"Note: {tool.get('id', 'tool')} is {status}.")
+
+
+def _doctor(settings: Settings, *, as_json: bool = False) -> int:
     report = build_capabilities(settings)
     required = report["commands"]
     prediction_valid = report["label"]["prediction"]["status"] != "misconfigured"
     cuda_model_valid = True
+    cuda_probe = None
     providers = tuple(getattr(settings, "tracker_onnx_providers", ()))
     if "CUDAExecutionProvider" in providers:
         cuda_probe = probe_camera_model_cuda_session(
@@ -37,8 +227,13 @@ def _doctor(settings: Settings) -> int:
         )
         report["cuda_model_session"] = cuda_probe
         cuda_model_valid = bool(cuda_probe["ready"])
-    print(json.dumps(report, indent=2))
-    ready = required["ffmpeg"] and required["ffprobe"] and prediction_valid and cuda_model_valid
+    ready = bool(
+        required["ffmpeg"] and required["ffprobe"] and prediction_valid and cuda_model_valid
+    )
+    if as_json:
+        print(json.dumps(report, indent=2))
+    else:
+        _render_doctor(report, _doctor_sections(report, cuda_probe), ready)
     return 0 if ready else 1
 
 
@@ -113,8 +308,21 @@ def _package_tracker_models(spec: Path, output_dir: Path) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(prog="cubed-core")
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"cubed-core {__version__}",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
-    subparsers.add_parser("doctor", help="Report local CPU/GPU/media capabilities")
+    doctor = subparsers.add_parser(
+        "doctor",
+        help="Check this computer is ready, in plain language",
+    )
+    doctor.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the raw capabilities document instead of the readable report",
+    )
     subparsers.add_parser(
         "verify-tracker-models",
         help="Verify the configured tracker model manifest, bytes, and SHA-256 identities",
@@ -185,7 +393,7 @@ def main() -> int:
         return _package_tracker_models(args.spec, args.output_dir)
     settings = Settings.from_env()
     if args.command == "doctor":
-        return _doctor(settings)
+        return _doctor(settings, as_json=args.json)
     if args.command == "verify-tracker-models":
         return _verify_tracker_models(settings)
     if args.command == "import-video":

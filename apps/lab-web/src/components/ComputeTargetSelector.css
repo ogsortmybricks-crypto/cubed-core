@@ -7,6 +7,36 @@
   min-width: 0;
 }
 
+/*
+ * The recommendation sits above the picker so the usable target reads before
+ * the control that changes it. It is quiet when nothing needs a decision and
+ * accented only when this machine cannot run the job.
+ */
+.compute-target-recommendation {
+  margin: 0 0 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--blue);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.compute-target-recommendation strong {
+  color: var(--ink);
+}
+
+.compute-target-recommendation-action {
+  display: grid;
+  gap: 9px;
+  justify-items: start;
+}
+
+.compute-target-recommendation-action p {
+  margin: 0;
+}
+
 .compute-target-setup {
   margin-top: 12px;
   border: 1px solid var(--line);

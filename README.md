@@ -4,6 +4,44 @@ Cubed Core reconstructs a 3x3 puzzle cube solve from ordinary 120 fps phone
 video. It combines per-frame camera evidence with an exact search over legal
 cube states and whole-cube orientations.
 
+> **A fork.** This repository is a fork of
+> [KingBobJoeIV/cubed-core](https://github.com/KingBobJoeIV/cubed-core) by
+> Manas, the original author of everything the fork is built on. The code stays
+> under [AGPL-3.0-only](LICENSE). See [NOTICE](NOTICE) and
+> [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) for the full attribution.
+> Downloaded models, demo clips, and datasets are still published from the
+> upstream releases and Hugging Face repositories.
+
+## New here? Start with the Demo
+
+The Demo replays one finished, preserved solve with the video, overlays, and
+reconstructed moves side by side. It needs **no graphics card, no downloads,
+and no account**. It is the fastest way to see what this project does.
+
+On macOS, Linux, or WSL2:
+
+```bash
+git clone https://github.com/ogsortmybricks-crypto/cubed-core.git
+cd cubed-core
+./setup.sh --install-uv
+make workbench
+```
+
+Open the address the last command prints, usually
+<http://127.0.0.1:8000/>. It opens on Demo.
+
+Two commands worth knowing:
+
+| Command | What it tells you |
+| --- | --- |
+| `make doctor` | Plain-language check of what this computer can and cannot do, and how to fix anything missing |
+| `make help` | The full list of commands, grouped by task |
+
+If `./setup.sh` stops, it names the one thing that is missing and the exact
+command to install it. Run it again afterwards. It is safe to re-run.
+
+## What each page does
+
 The public workflow is intentionally small:
 
 1. **Demo** shows one preserved run with synchronized video, overlays, face
@@ -31,17 +69,12 @@ boundary](docs/EVIDENCE.md) before publishing a result.
 · [camera tracker](https://huggingface.co/cubed-core/camera-tracker-v1)
 · [read-trust model](https://huggingface.co/cubed-core/read-trust-v1)
 
-## Try the workbench
+## Installing on other systems
 
-On macOS, Linux, or WSL2, install Python 3.10 through 3.12, Node 22.3 or
-newer on the Node 22 line, FFmpeg, Git, Make, and the pinned `uv` version:
-
-```bash
-git clone https://github.com/KingBobJoeIV/cubed-core.git
-cd cubed-core
-./setup.sh --install-uv
-make workbench
-```
+The quickstart above covers macOS, Linux, and WSL2. It expects Python 3.10
+through 3.12, Node 22.3 or newer on the Node 22 line, FFmpeg, Git, and Make.
+`./setup.sh --install-uv` installs the one remaining pinned tool for you and
+names anything else that is missing.
 
 > [!WARNING]
 > Native Windows is experimental and may still be broken. The current fix for
@@ -59,7 +92,7 @@ Python 3.12, Node 22.3 or newer on the Node 22 line, FFmpeg, Git, and
 `uv 0.11.16` on `PATH`, run from PowerShell:
 
 ```powershell
-git clone https://github.com/KingBobJoeIV/cubed-core.git
+git clone https://github.com/ogsortmybricks-crypto/cubed-core.git
 cd cubed-core
 uv sync --locked --python 3.12 --extra dev --extra label --extra decode
 npm --prefix apps/lab-web ci
@@ -77,7 +110,7 @@ same-machine use.
 For Docker:
 
 ```bash
-git clone https://github.com/KingBobJoeIV/cubed-core.git
+git clone https://github.com/ogsortmybricks-crypto/cubed-core.git
 cd cubed-core
 make docker-cpu
 ```

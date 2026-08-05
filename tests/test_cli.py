@@ -93,9 +93,39 @@ def test_doctor_requires_real_cuda_model_probe_when_cuda_is_explicit(
         tracker_model_manifest=Path("/models/manifest.json"),
     )
 
-    assert cli._doctor(settings) == 1
+    assert cli._doctor(settings, as_json=True) == 1
     report = json.loads(capsys.readouterr().out)
     assert report["cuda_model_session"]["ready"] is False
+
+
+def test_doctor_reports_readiness_in_plain_language_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(cli, "build_capabilities", lambda _settings: _report())
+
+    assert cli._doctor(object()) == 0
+    output = capsys.readouterr().out
+    assert "readiness check" in output
+    assert "Everything required is ready." in output
+    assert "Next step:  make workbench" in output
+    # The readable report must not leak the raw capabilities document.
+    with pytest.raises(json.JSONDecodeError):
+        json.loads(output)
+
+
+def test_doctor_names_the_missing_media_tool_and_its_install_command(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(cli, "build_capabilities", lambda _settings: _report(ffmpeg=None))
+
+    assert cli._doctor(object()) == 1
+    output = capsys.readouterr().out
+    assert "FFmpeg" in output
+    assert "not found on PATH" in output
+    assert "brew install ffmpeg" in output
+    assert "1 item needs attention" in output
 
 
 def test_derive_command_prints_new_capture_receipt(
