@@ -2,6 +2,7 @@ export type WorkbenchNavId =
   | "demo"
   | "decode"
   | "runs"
+  | "coach"
   | "import"
   | "label";
 
@@ -48,6 +49,14 @@ export const WORKBENCH_NAV_GROUPS: readonly WorkbenchNavGroup[] = [
           "/analyze",
           "/analysis",
         ],
+      },
+      {
+        id: "coach",
+        label: "Coach",
+        to: "/coach",
+        paths: ["/coach"],
+        badge: "NEW",
+        badgeDetail: "Explainable solve analysis and practice cues.",
       },
     ],
   },

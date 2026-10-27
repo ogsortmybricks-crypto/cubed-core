@@ -15,6 +15,7 @@ import {
 } from "react-router-dom";
 
 import { LocalLabelWorkbench } from "./components/LocalLabelWorkbench";
+import { CoachWorkbench } from "./components/CoachWorkbench";
 import { PublishedDemoPage } from "./components/PublishedDemoPage";
 import { ReconstructWorkbench } from "./components/ReconstructWorkbench";
 import { RunsWorkbench } from "./components/RunsWorkbench";
@@ -271,6 +272,7 @@ function App() {
           element={<Navigate to="/import" replace />}
         />
         <Route path="/label" element={<LocalLabelWorkbench />} />
+        <Route path="/coach" element={<CoachWorkbench />} />
         <Route path={PUBLISHED_DEMO_ROUTE} element={<PublishedDemoPage />} />
         <Route path="/decode" element={<ReconstructWorkbench />} />
         <Route path="/runs" element={<RunsWorkbench />} />
