@@ -299,6 +299,7 @@ test("navigation keeps its exact grouped structure", () => {
           { item: "Demo", to: "/demo", badge: undefined },
           { item: "Decode", to: "/decode", badge: undefined },
           { item: "Runs", to: "/runs", badge: undefined },
+          { item: "Coach", to: "/coach", badge: "NEW" },
         ],
       },
       {

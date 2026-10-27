@@ -16,6 +16,7 @@ test("navigation keeps execution separate from run inspection", () => {
   assert.equal(workbenchNavIdForPath("/decode"), "decode");
   assert.equal(workbenchNavIdForPath("/reconstruct"), "decode");
   assert.equal(workbenchNavIdForPath("/runs"), "runs");
+  assert.equal(workbenchNavIdForPath("/coach"), "coach");
   assert.equal(workbenchNavIdForPath("/track"), null);
   assert.equal(workbenchNavIdForPath("/process"), null);
   assert.equal(workbenchNavIdForPath("/analyze"), "runs");
@@ -35,8 +36,8 @@ test("the flat nav list stays the groups in order", () => {
     WORKBENCH_NAV_GROUPS.flatMap((group) => group.items.map((item) => item.id)),
   );
   assert.deepEqual(
-    WORKBENCH_NAV_ITEMS.slice(0, 3).map((item) => item.id),
-    ["demo", "decode", "runs"],
+    WORKBENCH_NAV_ITEMS.slice(0, 4).map((item) => item.id),
+    ["demo", "decode", "runs", "coach"],
   );
   for (const item of WORKBENCH_NAV_ITEMS) {
     assert.equal(workbenchNavIdForPath(item.to), item.id, item.to);

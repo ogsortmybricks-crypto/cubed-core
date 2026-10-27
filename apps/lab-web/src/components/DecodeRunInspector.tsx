@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { createCaptureMediaTicket } from "../api";
 import {
@@ -743,6 +744,7 @@ export function DecodeRunInspector({
   resultName?: string;
   portable?: boolean;
 }) {
+  const navigate = useNavigate();
   const [runResult, setRunResult] = useState<DecodeResultDocument | null>(
     result ?? null,
   );
@@ -1359,6 +1361,25 @@ export function DecodeRunInspector({
                   ? "The job completed on this input. The sequence replayed to solved. Review it against the recording."
                   : "No solved reconstruction was emitted."}
               </p>
+              {runResult.status === "completed" && runResult.moves.length > 0 && (
+                <button
+                  className="button button-primary decode-run-coach-action"
+                  type="button"
+                  onClick={() =>
+                    navigate("/coach", {
+                      state: {
+                        moves: runResult.moves,
+                        sourceName:
+                          pairedCapture?.original_filename ??
+                          runName ??
+                          "Selected decoded run",
+                      },
+                    })
+                  }
+                >
+                  Coach this solve
+                </button>
+              )}
             </div>
             <dl>
               <div>
